@@ -22,7 +22,7 @@ export default async function handler(req, res) {
     const html = await response.text();
 
     if (html.includes("점검중") || html.includes("service_check")) {
-      return res.status(200).json({ success: true, query: q, count: 0, songs: [], message: "TJ 점검 중" });
+      return res.status(200).json({ success:true, query:q, count:0, songs:[], message:"TJ 점검 중" });
     }
 
     const songs = [];
@@ -58,8 +58,8 @@ export default async function handler(req, res) {
       if (songs.length >= 50) break;
     }
 
-    return res.status(200).json({ success: true, query: q, count: songs.length, songs });
+    return res.status(200).json({ success:true, query:q, count:songs.length, songs });
   } catch (e) {
-    return res.status(500).json({ success: false, error: e.message });
+    return res.status(500).json({ success:false, error:e.message });
   }
 }
