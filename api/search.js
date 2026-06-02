@@ -4,12 +4,11 @@ export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
   if (req.method === "OPTIONS") return res.status(200).end();
 
-  const { q, type = "1" } = req.query;
+  const { q, type = "0" } = req.query;
   if (!q?.trim()) return res.status(400).json({ error: "검색어를 입력해주세요." });
 
   try {
-    const strCond = type === "2" ? "2" : type === "3" ? "0" : "1";
-    const url = `https://www.tjmedia.com/tjsong/song_search_list.asp?strType=16&strCond=${strCond}&strText=${encodeURIComponent(q)}&strSize05=100`;
+    const url = `https://www.tjmedia.com/song/accompaniment_search?nationType=&strType=${type}&searchTxt=${encodeURIComponent(q)}`;
 
     const response = await fetch(url, {
       headers: {
@@ -17,23 +16,17 @@ export default async function handler(req, res) {
         "Referer": "https://www.tjmedia.com/",
         "Accept": "text/html,application/xhtml+xml",
         "Accept-Language": "ko-KR,ko;q=0.9",
-        "Accept-Encoding": "gzip, deflate, br",
       },
     });
 
     const html = await response.text();
 
-    // 점검 중 체크
     if (html.includes("점검중") || html.includes("service_check")) {
-      return res.status(200).json({
-        success: true, query: q, count: 0, songs: [],
-        message: "TJ미디어 서버 점검 중입니다. 잠시 후 다시 시도해주세요."
-      });
+      return res.status(200).json({ success: true, query: q, count: 0, songs: [], message: "TJ 점검 중" });
     }
 
     const songs = [];
     const rowRegex = /<tr[^>]*>([\s\S]*?)<\/tr>/gi;
-    const cellRegex = /<td[^>]*>([\s\S]*?)<\/td>/gi;
     let rowMatch;
     let rowIndex = 0;
 
@@ -41,9 +34,9 @@ export default async function handler(req, res) {
       if (rowIndex++ === 0) continue;
       const rowHtml = rowMatch[1];
       const cells = [];
+      const cellRegex = /<td[^>]*>([\s\S]*?)<\/td>/gi;
       let cellMatch;
-      const cellRegexCopy = new RegExp(cellRegex.source, "gi");
-      while ((cellMatch = cellRegexCopy.exec(rowHtml)) !== null) {
+      while ((cellMatch = cellRegex.exec(rowHtml)) !== null) {
         cells.push(
           cellMatch[1]
             .replace(/<[^>]+>/g, "")
@@ -53,9 +46,9 @@ export default async function handler(req, res) {
             .trim()
         );
       }
-      if (cells.length >= 3 && cells[0] && cells[1] && cells[1] !== "곡제목" && /^\d+$/.test(cells[0])) {
+      if (cells.length >= 3 && cells[0] && cells[1] && /^\d+$/.test(cells[0].replace(/\s/g,""))) {
         songs.push({
-          tj: cells[0],
+          tj: cells[0].replace(/\s/g,""),
           title: cells[1],
           artist: cells[2],
           lyricist: cells[3] || "",
